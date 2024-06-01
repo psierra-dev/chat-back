@@ -1,4 +1,5 @@
 function connectMongoDB(mongoose) {
+  console.log(process.env.DB_URL, "DB_URL");
   mongoose
     .connect(process.env.DB_URL, {})
     .then(() => {
