@@ -45,13 +45,17 @@ app.post("/login", async (req, res) => {
   const data = req.body;
   console.log(data, "data");
 
-  const isUsed = await userService.findOne({ username: data.username });
+  try {
+    const isUsed = await userService.findOne({ username: data.username });
 
-  if (isUsed) {
-    return res.status(400).send("username en uso");
+    if (isUsed) {
+      return res.status(400).send("username en uso");
+    }
+
+    res.status(200).send("ready");
+  } catch (error) {
+    res.status(500).send(error);
   }
-
-  res.status(200).send("ready");
 });
 
 const io = new Server(httpServer, {
