@@ -22,6 +22,7 @@ let corsOptionsDelegate = function (req, callback) {
   } else {
     corsOptions = { origin: false }; // disable CORS for this request
   }
+  console.log(corsOptions, "corsOptions");
   callback(null, corsOptions); // callback expects two parameters: error and options
 };
 app.use(cors(corsOptionsDelegate));
@@ -39,6 +40,18 @@ app.use((req, res, next) => {
   next();
 });
 connectMongoDB(mongoose);
+
+mongoose.connection.on("connected", () => {
+  console.log("Mongoose connected to " + uri);
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("Mongoose connection error: " + err);
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.log("Mongoose disconnected");
+});
 const userService = new UserService();
 
 app.post("/login", async (req, res) => {
