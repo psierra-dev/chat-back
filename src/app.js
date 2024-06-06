@@ -5,6 +5,8 @@ const { Server } = require("socket.io");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const cors = require("cors");
+const { v4: uuidv4 } = require("uuid");
+
 const { connectMongoDB } = require("./db");
 
 const UserService = require("./service/UserService");
@@ -70,38 +72,57 @@ const io = new Server(httpServer, {
 io.use(async (socket, next) => {
   const data = socket.handshake.auth;
 
-  if (!data) {
-    return next(new Error("Invalid data"));
-  }
-  //const isUsed = usersStorage.some((user) => user.username === data.username);
-  const isUsed = await userService.findOne({ username: data.username });
-  console.log(isUsed, "--isUsed");
-  if (isUsed) {
-    return next(new Error("Username in use"));
+  console.log(data, "data");
+  /*if (sessionId) {
+    const user = await userService.findOne({ sessionId: sessionId });
+    console.log(user, "--user");
+    if (user) {
+      const { sessionId, userId, ...userData } = user;
+      socket.userId = userId;
+      socket.sessionId = sessionId;
+      socket.type = "update";
+      return next();
+    }
+  }*/
+
+  console.log(!("sessionId" in data), "dataSessionId");
+  if (!("sessionId" in data) && !("userId" in data)) {
+    socket.currentUser = {
+      sessionId: uuidv4(),
+      userId: uuidv4(),
+      ...data,
+    };
+    return next();
   }
 
-  socket.data = data;
+  socket.currentUser = data;
   next();
 });
 
 io.on("connection", async (socket) => {
+  console.log(socket.currentUser, "currentUser");
   await userService.create({
-    ...socket.data,
-    id: socket.id,
+    ...socket.currentUser,
     online: true,
-    like: [],
-    dislike: [],
   });
 
-  console.log("connected: ", socket.id);
+  socket.emit("user:session", socket.currentUser);
+
+  socket.join(socket.currentUser.userId);
+
+  console.log("connected: ", socket.currentUser.userId);
   const allUsers = await userService.findAll();
 
-  const filterdCurrentUser = allUsers?.filter((u) => u.id !== socket.id);
+  const filterdCurrentUser = allUsers?.filter(
+    (u) => u.userId !== socket.currentUser.userId
+  );
 
   socket.emit("user:all", filterdCurrentUser);
 
   //const currentUser = usersStorage.filter((user) => user.id === socket.id);
-  const currentUser = await userService.findOne({ id: socket.id });
+  const currentUser = await userService.findOne({
+    userId: socket.currentUser.userId,
+  });
 
   socket.broadcast.emit("user:connected", currentUser);
 
@@ -138,21 +159,27 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("message:private", ({ toId, message }) => {
-    const sender = allUsers.filter((user) => user?.id === socket?.id);
+    const sender = allUsers.filter(
+      (user) => user?.userId === socket?.currentUser.userId
+    );
 
     io.to(toId).emit("message:private", {
       sender: sender[0],
       message,
       toId: toId,
-      fromId: sender[0].id,
+      fromId: sender[0].userId,
       self: false,
     });
   });
 
+  socket.on("user:delete", () => {
+    console.log(socket.userId, "user:delete");
+  });
+
   socket.on("disconnect", async () => {
-    console.log("user disconnect", socket.id);
-    await userService.deleteOne(socket.id);
-    io.emit("user:disconnected", socket.id);
+    console.log("user disconnect", socket.currentUser.userId);
+    await userService.deleteOne(socket.currentUser.userId);
+    io.emit("user:disconnected", socket.currentUser.userId);
   });
 });
 

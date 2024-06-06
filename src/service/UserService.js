@@ -3,7 +3,33 @@ const User = require("../db/models/Users");
 class UserService {
   constructor() {}
 
+  async createOrUpdate(data, type) {
+    console.log(type, type);
+    if (type === "update") {
+      const user = await this.updateStatu(data.userId, true);
+      console.log(user, "user-update");
+    }
+    if (type === "create") {
+      await this.create(data);
+    }
+  }
+
+  async updateStatu(userId, statu) {
+    console.log(userId);
+    try {
+      const user = await User.findOneAndUpdate(
+        { userId: userId },
+        { online: statu },
+        { new: true, runValidators: true }
+      );
+      return user;
+    } catch (error) {}
+  }
+
   async create(data) {
+    const userCreated = await this.findOne({ userId: data.userId });
+    console.log(userCreated);
+    if (userCreated) return;
     const user = new User(data);
     await user.save();
     return user;
@@ -70,7 +96,7 @@ class UserService {
   }
 
   async deleteOne(userId) {
-    await User.findOneAndDelete({ id: userId });
+    await User.findOneAndDelete({ userId: userId });
   }
   async findOne(condition) {
     const user = await User.findOne(condition);
