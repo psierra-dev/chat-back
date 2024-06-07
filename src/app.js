@@ -14,7 +14,7 @@ require("dotenv").config();
 
 const app = express();
 const httpServer = createServer(app);
-console.log(process.env.CLIENT_URL);
+
 const allowlist = [process.env.CLIENT_URL];
 
 let corsOptionsDelegate = function (req, callback) {
@@ -73,20 +73,8 @@ io.use(async (socket, next) => {
   const data = socket.handshake.auth;
 
   console.log(data, "data");
-  /*if (sessionId) {
-    const user = await userService.findOne({ sessionId: sessionId });
-    console.log(user, "--user");
-    if (user) {
-      const { sessionId, userId, ...userData } = user;
-      socket.userId = userId;
-      socket.sessionId = sessionId;
-      socket.type = "update";
-      return next();
-    }
-  }*/
-
-  console.log(!("sessionId" in data), "dataSessionId");
-  if (!("sessionId" in data) && !("userId" in data)) {
+  if (data !== null && !("sessionId" in data) && !("userId" in data)) {
+    //login
     socket.currentUser = {
       sessionId: uuidv4(),
       userId: uuidv4(),
@@ -94,7 +82,7 @@ io.use(async (socket, next) => {
     };
     return next();
   }
-
+  //Session
   socket.currentUser = data;
   next();
 });
@@ -131,7 +119,7 @@ io.on("connection", async (socket) => {
   socket.on("user:like", async (toId, callback) => {
     //socket.emit("user:all", usersStorage);
     try {
-      const user = await userService.addOrRemoveLike(socket.id, toId);
+      const user = await userService.addOrRemoveLike(socket.userId, toId);
       console.log(user, "user");
       callback({
         user,
@@ -139,6 +127,10 @@ io.on("connection", async (socket) => {
       });
       io.emit("user:update", user);
     } catch (error) {
+      callback({
+        user: null,
+        status: "error",
+      });
       console.log(error, "error");
     }
   });
@@ -146,7 +138,7 @@ io.on("connection", async (socket) => {
   socket.on("user:dislike", async (toId, callback) => {
     //socket.emit("user:all", usersStorage);
     try {
-      const user = await userService.addOrRemoveDisLike(socket.id, toId);
+      const user = await userService.addOrRemoveDisLike(socket.userId, toId);
       console.log(user, "user");
       callback({
         user,
@@ -154,6 +146,10 @@ io.on("connection", async (socket) => {
       });
       io.emit("user:update", user);
     } catch (error) {
+      callback({
+        user: null,
+        status: "error",
+      });
       console.log(error, "error");
     }
   });

@@ -27,7 +27,10 @@ class UserService {
   }
 
   async create(data) {
-    const userCreated = await this.findOne({ userId: data.userId });
+    console.log(data);
+    const userCreated = await this.findOne({
+      $or: [{ username: data.username }, { userId: data.userId }],
+    });
     console.log(userCreated);
     if (userCreated) return;
     const user = new User(data);
