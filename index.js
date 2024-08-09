@@ -1,6 +1,13 @@
-const { httpServer } = require("./src/app");
+const {createServer} = require("node:http");
+const createApp = require("./src/app");
+const config = require("./src/config");
 
-const port = process.env.PORT || 3000;
+const httpServer = createServer();
 
-httpServer.listen(port);
-console.log("Sever connected port ", port);
+createApp(httpServer, {
+  cors: "*",
+});
+
+httpServer.listen(config.port, () => {
+  console.log("Sever connected port ", config.port);
+});

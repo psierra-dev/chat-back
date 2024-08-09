@@ -1,7 +1,8 @@
+const config = require("../config");
+
 require("dotenv").config();
 function connectMongoDB(mongoose) {
-  console.log(process.env.DB_URL, "DB_URL");
-  const uri = process.env.DB_URL;
+  const uri = config.db_url;
   mongoose
     .connect(uri, {})
     .then(() => {
@@ -24,4 +25,4 @@ function connectMongoDB(mongoose) {
   });
 }
 
-module.exports = { connectMongoDB };
+module.exports = {connectMongoDB};
